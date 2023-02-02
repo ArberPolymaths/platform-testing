@@ -1,0 +1,22 @@
+{
+    "name": "ims-qa",
+    "version": "1.0.0",
+    "description": "",
+    "main": "index.js",
+    "scripts": {
+        "test": "cucumber-js"
+    },
+    "author": "",
+    "license": "ISC",
+    "dependencies": {
+        "@cucumber/cucumber": "^8.9.0",
+        "chai": "^4.3.7",
+        "node-ts": "^5.1.2",
+        "puppeteer": "^19.3.0",
+        "puppeteer-shadow-selector": "^1.0.1",
+        "ts-node": "^10.9.1"
+    },
+    "devDependencies": {
+        "@types/chai": "^4.3.4"
+    }
+}

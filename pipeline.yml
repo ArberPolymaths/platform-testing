@@ -1,0 +1,83 @@
+
+trigger:
+  branches:
+    include:
+      - master
+      - develop
+      - uat
+  paths:
+    include:
+      - packages/ims-qa/*
+
+pool:
+    vmImage: 'ubuntu-latest'
+
+# variables:
+#   - template: ../.ops/config/common-vars.yml
+#   - ${{ if eq(variables['build.SourceBranchName'], 'develop') }}:
+#       - template: ../.ops/config/qa-vars.yml
+#       - group: GLOBAL_SECRETS
+#       - group: IMS_SECRETS_QA
+#   - ${{ if eq(variables['build.SourceBranchName'], 'uat') }}:
+#       - template: ../.ops/config/uat-vars.yml
+#       - group: GLOBAL_SECRETS
+#       - group: IMS_SECRETS_UAT
+#   - ${{ if eq(variables['build.SourceBranchName'], 'master') }}:
+#       - template: ../.ops/config/prod-vars.yml
+#       - group: GLOBAL_SECRETS
+#       - group: IMS_SECRETS_PROD
+
+stages:
+  - stage: Build
+    jobs:
+      - job: build
+        displayName: Building Stage
+        steps:
+          - checkout: self
+          - script: |
+              cp .npmrc ~/.npmrc
+              npm -v
+              cd packages/ims-qa              
+              npm i
+            displayName: Configuring npm     
+            env:
+              NPM_ACCESS_TOKEN: $(NPM-AUTOMATION-ACCESS-TOKEN)  
+
+          - publish: '$(Build.ArtifactStagingDirectory)'
+            # condition: or(eq(variables['Build.Reason'], 'Schedule'), eq(variables['Build.Reason'], 'Manual'))
+            displayName: 'Publish artifact'
+            artifact: $(Build.Repository.Name) 
+
+  - stage:  Chrome
+    jobs:
+      - job: Install
+        displayName: Installing chrome
+        steps:
+          - script: |
+                    sudo apt-get update && apt-get install -y software-properties-common python3-pip
+                    sudo apt-get install curl gnupg -y \
+                    && sudo curl --location --silent https://dl-ssl.google.com/linux/linux_signing_key.pub |sudo apt-key add - \
+                    && sudo sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google.list' \
+                    && sudo apt-get update \
+                    && sudo apt-get install google-chrome-stable -y --no-install-recommends \
+                    && sudo rm -rf /var/lib/apt/lists/* 
+            displayName: Running chrome 
+            env:
+              NPM_ACCESS_TOKEN: $(NPM-AUTOMATION-ACCESS-TOKEN) 
+
+  - stage: Test
+    jobs:
+      - job: Testing
+        displayName: Testing Stage
+        steps:
+          - script: |
+             cd packages/ims-qa
+             npm i
+             npm install ts-node --save-dev
+             npm run test
+            displayName: Running Tests
+            env:
+              NPM_ACCESS_TOKEN: $(NPM-AUTOMATION-ACCESS-TOKEN) 
+
+                 #  npm install -g ts-node --save-dev
+          #  npm install @cucumber/cucumber
